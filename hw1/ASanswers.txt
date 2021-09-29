@@ -1,0 +1,77 @@
+Danley Nemorin
+Fall Semester 2021
+CS450
+
+Q1 Exercise 1.6
+
+Answer: I believe that Alyssa's new-if is causing a loop due to applicable 
+evalution that occurs when you use a procedure,
+this doesn't happen in the special form if.
+
+I wrote the entire sqrt example on the textbook, and wrote Alyssa's new 
+procedure where the new-if procedure is created.
+
+After running an example sqrt(2), it went into a extremely long loop. 
+My reasons before it is that since we've created a new procedure
+that represents the special form if. We get application-evaluation where the 
+functions are called prior the procedure happening. This leads to (sqrt-iter 
+(improve guess x)))) being evaluated and thus evaluating forever. In the 
+original sqrt-iter, the special form do have their own way of being evaluated,
+ as mentioned in section 1.1.6, 
+
+where evaluates the predicate first, then depending on that it either chooses 
+the cosequent or alternative.
+
+
+Q2 - Exercise 1.12
+
+answer:
+(define (p r e)
+        (cond ((= e 0) 1)
+                ((= r e) 1)
+                (else (+ ( p (- r 1) e) (p (- r 1) (- e 1))))))
+
+
+In this example I drew out an example of pascal triangle, and I tried to 
+attempt how to solve it but nothing helped. After reading the book of course, 
+I realized that a good approach to this would be writing a Tree Recursion.
+On 1.2.2 the Fibonacci example shows us that it's important to compute (fib 4)
+and (fib 3) to get (fib 5). This has ot be the same that we would need to 
+compute a specific amount of (p r e) in order to get the right element. 
+In this case the way how pascal works in order to get the compute you want
+you need to essentially add the two elements on the row above. As well as if
+you're at the edge it should always be one (or you can assume that the edge
+that's not there is 0, but 0+1=1)
+
+ For example:
+
+(p 2 1) = 2
+
+    1
+   1 1
+  1 2 1
+ 1 3 3 1
+1 4 6 4 1
+
+in row 2, column 1, if we added the two elements next two 2 it would
+represent that.
+
+We need to build a tree where we get all of the other (p r e) above 2
+So in the case of:
+
+(p 4 2) = 6
+
+We'd need to get or somehow find
+ (p 3 2) & (p 3 1)
+
+eventually we need to get to a point where either:
+1. It checks the top, or it checks one of the edges (where e=0 OR e=r).
+(cond((= e 0) 1)
+     ((= r e) 1)
+
+Essentially eventually the recursion ends once we get to 1, and it will
+add the sums similar to fib and give us our example.
+Here's the else block:
+
+(+ (p (- r 1) e) (p (- r 1) (-e 1)))
+
