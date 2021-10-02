@@ -68,17 +68,17 @@
         (cons (/ qBaseUnit toBaseUnit) unit-list))
       #f))
 
-(convert '(27.5 (furlong 1)(fortnight -1)) '((mi 1)(hr -1)))
+;(convert '(27.5 (furlong 1)(fortnight -1)) '((mi 1)(hr -1)))
 ; 0.010230654761904762
-(convert '(27.5 (lbm 1)(furlong 1)(fortnight -2)) '((ton 1)(mi 1)(hr -2)))
+;(convert '(27.5 (lbm 1)(furlong 1)(fortnight -2)) '((ton 1)(mi 1)(hr -2)))
 ; 1.5224188633786846e-008
-(convert '(27.5 (km 1)(km 1)) '((yd 2))) ; 32889726.273279708
-(convert '(1 (mg 1)) '((km 2))) ; false
-(convert '(1 (in 1)) '((mg 1))) ; false
-(convert '(1 (m 1)) '((in 1)))  ; 39.37007874015748
-(convert '(1 (yd 2)) '((km 1)))  ; false
-(convert '(10 (kg 1)(m 2)(sec -2)) '((n 1))) ; fail and bad
-(convert-to-element '((mi 1)(hr -1)))
+;(convert '(27.5 (km 1)(km 1)) '((yd 2))) ; 32889726.273279708
+;(convert '(1 (mg 1)) '((km 2))) ; false
+;(convert '(1 (in 1)) '((mg 1))) ; false
+;(convert '(1 (m 1)) '((in 1)))  ; 39.37007874015748
+;(convert '(1 (yd 2)) '((km 1)))  ; false
+;(convert '(10 (kg 1)(m 2)(sec -2)) '((n 1))) ; fail and bad
+;(convert-to-element '((mi 1)(hr -1)))
 
 ; My notes on the conversion part
 ; I believe checking for
@@ -152,8 +152,9 @@
 ; and miles/hr -> (1609.344/3600)
 ; then (27 * (201.16800/1209600)) / (1609.344/3600) = 0.01023068
 ; And that would be our conversion!
-; This took 2 days to finally realize I could approach it that way, and I spent
-; Time understanding recursive algorithm techniques that would work for this
+; This took 2 days to finally realize I could approach it that way, 
+; and I spent Time understanding recursive algorithm techniques 
+; that would work for this.
 ; But I realized that after testing mult-unit-list that I was able to
 ; simply traverse the Unit List, and get the information needed from unit.dats
 ; to multiply them by the base case they have. The algorithm doesn't check
@@ -162,5 +163,6 @@
 ; The Biggest issue I have overall was for Joules and other metric units
 ; that have more than 1 base unit, as I'd have to write an algorithm to
 ; essentially break that down and I was running into a lot problems that
-; I planned to come back it but I haven't had the time. So my code has issues with trying
-; to convert units that could work with joule, n, and others with more than 1 base unit.
+; I planned to come back it but I haven't had the time. So my code has 
+;issues with trying to convert units that could work with joule, n, 
+; and others with more than 1 base unit.
