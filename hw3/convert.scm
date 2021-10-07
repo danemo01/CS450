@@ -7,13 +7,23 @@
 
 (define source (with-input-from-file "units.dat" read-file))
 
+
+; So this is incorrect
+; Essentially what this does is that it returns a given
+; the one-to-element pair
+; This is bad because if there more than 1 element
+; This won't work in other cases.
+; But this will most likely work 
 (define (one-to-element pair)
-  (define (get-unit key-value) (car (cadadr key-value)))
+  (define (get-base-unit key-value) (car (cadadr key-value)))
+  (define (get-base-exp key-value) (cadr (cadadr key-value)))
   (define (get-expo pair) (cdr pair))
-  (if (assoc (car pair) source)
-      (cons (get-unit (assoc (car pair) source))
-            (get-expo pair))
-      pair))
+  (let ((base-unitlist (assoc (car pair) source))) 
+  (if base-unitlist
+      (let ((base-exp (cadr (cadadr base-unitlist ))))
+      (cons (get-base-unit base-unitlist)
+            (list (* (car (get-expo pair)) base-exp))))
+      pair)))
 
 ; Will take the list
 ; It checks if the element is equvilent to the type
@@ -54,13 +64,36 @@
         (get-expo l))
        (mult-unit-list (cdr l)))))
 
+  
+; work on progress
 (define (convert-to-element lst)
-  (map one-to-element lst))
+  (define (getbase lst)
+    (if (equal? (assoc (caar lst) source) #f)
+        (list '())
+        (cdadr (assoc (caar lst) source))))
+  (if (null? lst)
+      '()
+      (let ((multi-unit (getbase lst)))
+        (if (equal? (length (cdr multi-unit)) 0)
+            (cons (one-to-element (car lst)) (convert-to-element (cdr lst)))
+            (multi-to-element multi-unit lst)
+            ))))
+;It will past the innerlist
+; Then we will check if the innerlist is null
+; if it is, call convert-to-element again
+; if we pass ((m 1)(sec 1
+(define (multi-to-element innerlst lst)
+  (if (null? (cdr innerlst)) ; if 
+      (cons (one-to-element (car innerlst)) (convert-to-element (cdr lst)))
+      (cons (list (caar innerlst) (* (cadar innerlst) (cadar lst)))
+            (multi-to-element (cdr innerlst) lst)) 
+  ))
+
+
 
 (define (convert quantity unit-list) ; We pass quantity and unit-list
   ;we verify if both of unitlist being passed, have the similar
   ;amount of base
-  ; then we
   (if (convertable? (convert-to-element (cdr quantity))
                     (convert-to-element unit-list))
       (let ((qBaseUnit (* (car quantity) (mult-unit-list (cdr quantity))))
@@ -68,17 +101,18 @@
         (cons (/ qBaseUnit toBaseUnit) unit-list))
       #f))
 
-;(convert '(27.5 (furlong 1)(fortnight -1)) '((mi 1)(hr -1)))
+(convert '(27.5 (furlong 1)(fortnight -1)) '((mi 1)(hr -1)))
 ; 0.010230654761904762
-;(convert '(27.5 (lbm 1)(furlong 1)(fortnight -2)) '((ton 1)(mi 1)(hr -2)))
+(convert '(27.5 (lbm 1)(furlong 1)(fortnight -2)) '((ton 1)(mi 1)(hr -2)))
 ; 1.5224188633786846e-008
-;(convert '(27.5 (km 1)(km 1)) '((yd 2))) ; 32889726.273279708
-;(convert '(1 (mg 1)) '((km 2))) ; false
-;(convert '(1 (in 1)) '((mg 1))) ; false
-;(convert '(1 (m 1)) '((in 1)))  ; 39.37007874015748
-;(convert '(1 (yd 2)) '((km 1)))  ; false
-;(convert '(10 (kg 1)(m 2)(sec -2)) '((n 1))) ; fail and bad
-;(convert-to-element '((mi 1)(hr -1)))
+(convert '(27.5 (km 1)(km 1)) '((yd 2))) ; 32889726.273279708
+(convert '(1 (mg 1)) '((km 2))) ; false
+(convert '(1 (in 1)) '((mg 1))) ; false
+(convert '(1 (m 1)) '((in 1)))  ; 39.37007874015748
+(convert '(1 (yd 2)) '((km 1)))  ; false
+
+(convert '(1 (hp 1)) '((ft 1)(lbf 1)(min -1)))
+
 
 ; My notes on the conversion part
 ; I believe checking for
@@ -117,7 +151,7 @@
 ; Once I call convert-to-element on both of the unitlist I get:
 ; ((furlong 1)(fortnight -1)): ((m 1) (sec -1))
 ; '((mi 1)(hr -1))) : ((m 1) (sec -1))
-; Then I check if it's an convertible and essentialy will run a checker on all 
+; Then I check if it's an convertible and essentialy will run a checker on all
 ; and it will run triple-checker on both of the converted list
 ; and return this:
 ; ((furlong 1)(fortnight -1)): ((m 1) (sec -1)) -> (-1 1 0)
@@ -146,23 +180,27 @@
 ; what the unitlist needed to be by dividing by that.
 ; So if I needed to convert 27.5 (furlong per furnight) to miles per hr
 ; Then all I would really need to do is find the base conversion for
-; miles per hr, and then I dividde the conversion I have for
-; furlong per furnight by the conversion of miles per hr.
-; So we know furlong/furlong -> (201.16800/1209600) meters/second
-; and miles/hr -> (1609.344/3600)
-; then (27 * (201.16800/1209600)) / (1609.344/3600) = 0.01023068
-; And that would be our conversion!
-; This took 2 days to finally realize I could approach it that way, 
-; and I spent Time understanding recursive algorithm techniques 
-; that would work for this.
-; But I realized that after testing mult-unit-list that I was able to
-; simply traverse the Unit List, and get the information needed from unit.dats
-; to multiply them by the base case they have. The algorithm doesn't check
-; to see if the base units are similar and is dependent on the (convertable?)
+; miles per hr, and then I divide the conversion
+; I have for (furlong 1)(furnight -1)
+; by the conversion of miles per hr.
+; And shockingly enough it worked with no issue what so ever.
 
-; The Biggest issue I have overall was for Joules and other metric units
-; that have more than 1 base unit, as I'd have to write an algorithm to
-; essentially break that down and I was running into a lot problems that
-; I planned to come back it but I haven't had the time. So my code has 
-;issues with trying to convert units that could work with joule, n, 
-; and others with more than 1 base unit.
+; After HW3 Extension:
+; I'm keeping my notes down as the same as
+; I didn't have enough time to change it
+; But I was able to solve the issue the running this input:
+; (convert '(1 (hp 1)) '((ft 1)(lbf 1)(min -1)))
+; As mention above my original issue was that, when I was able to retrieve
+; The base unitlist from unit.dats, I didn't write my code to be able to
+; add the other baseunit. So the baseunit for 'hp is (kg 1)(m 2)(sec -3)
+; And It only took (kg 1), and it's because I really didn't know how to
+; recurisvely do it. However after trial and error rereading some of the notes.
+; I realized that I just needed an extra helper function that also iterated
+; through the recursion of convert-to-element called multi-to-elemen
+; Essentially I check if there's an extra nested list within the base unitlist
+; for a particular unit on units.dat. 
+; 
+; I also broke down the convert-to-element procedure where it called map,
+; and a prodecure, but broke it down where it's similar to map. But
+; It also checks to see if there's more.
+
