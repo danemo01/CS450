@@ -5,7 +5,7 @@
         (cons expr (read-file)))))
 
 (define data (with-input-from-file "dist.dat" read-file))
-
+;t
 
 (define (make-table)
  (let ((local-table (list '*table*)))
