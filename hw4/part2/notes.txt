@@ -1,0 +1,7 @@
+How the data input is represented:
+(start p1 3)
+(start p2 7)
+(p1 p2 1)
+(p2 end 11)
+(p1 end 22)
+

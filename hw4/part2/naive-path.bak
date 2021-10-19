@@ -1,0 +1,7 @@
+  (define (read-file)
+    (let ((expr (read)))
+      (if (eof-object? expr)
+          '()
+          (cons expr (read-file)))))
+
+  (define data (with-input-from-file "dist.dat" read-file))
