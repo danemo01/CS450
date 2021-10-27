@@ -1,3 +1,4 @@
+;Danley Nemorin
 (define (lookup-1d key table)
   (let ((record (assoc key (cdr table))))
     (if record
