@@ -1,0 +1,126 @@
+Danley Nemorin
+
+8.1)
+
+We're writing a streaming algorithm and we'll start with multiplication.
+Let's write a stream that multiples 
+
+Let's say we have a non-terming decimal:
+12/35 = .3428571428571428571428571 
+
+and we multiply by 87
+
+This is simple because we can just multiple it using fractions
+and we could convert that back to it's decimal representation
+making it too easy.
+
+*Also should hint that the fractional is a not-terminating, repeating decimal
+
+But let's try sqrt(2) = 1.414213562373009504880
+*Sqrt(2) is a non-terminating, non-repeating decimal 
+
+We're going to write an algorithm that is able to 
+give a representation in decimal form, either being
+non-terminating or terminating. 
+
+Example: 87 * .987436917\
+- Let's consider multiplying left-to-right
+
+Figure 16:
+- Red digits know that it's produced for sure,
+meaning that we don't have to wait to the end to shoot out
+numbers into the stream.
+
+So in the example of the first two products we gain,
+we get 8526, we know this is because .99999 X 87 = roughly 87
+and 87 + 8526 < 9000 so 8 will never ever change to 9.
+
+The reading implements a different matter:
+
+87 + 526 < 1000
+
+526 coming from? It's coming from our product of (7830 + 696) = 8526
+where we get the "pow" or the closet 10th digit close to 8526
+Which would be 1000 in this case. 
+
+So in this case 
+
+87 + 526 < 1000 - is true
+therefore 8 is a great
+
+However in some cases this isn't always true:
+
+Case 1 in Figure 16: 
+At the point which we're at 
+
+87 X 6 = 522
+6410 + 522 = 6932
+6932 mod 1000 = 932
+
+is (87 + 932) < 1000? - false
+so we keep consuming to the next one.
+next consume:
+69320 + 783 = 70103
+70103 % 10000 = 103
+(87 + 103) < 10000? - true
+
+then we shoot out 701!
+
+We're writing a rpogram that represents a stream of digits between 0 and 1
+by a multiplyer m
+
+- input stream ( in the example for fig 16 was (9 8 7 4 3 6 9 1 7) but can be
+infinte)
+
+- some intermediate list, which will be a-list
+So in our example: a-list starts empty, then beceoms (7 8 3) then (8 5 2 6)
+once we find 8 will never change, it becomes (5 2 6)
+We have some auxiliary variables, a-list (5 0 3) and 503 (integer val)
+
+
+1) Finish filling the table
+
+        Output Stream a a-list pow Input Stream
+        (85) 869 (869) 100 (4 3 6 9 1 7)
+69 + 87 >= 100; consume
+        (85) 9038 (9038) 1000 (3 6 9 1 7)
+87 + 38 < 1000; produce
+        (859) 38 (038) 100 (3 6 9 1 7)
+87 + 38 >= 100; consume
+        (859) 641 (641) 100 (6 9 1 7)
+87 + 41 >= 100; consume
+        (859) 6932 (6932) 1000 (9 1 7)
+87 + 932 >= 1000; consume
+        (859) 70103 (70103) 10000 (1 7)
+87 + 103 < 10000; produce
+        (8597) 103 (0103) 1000 (1 7)
+87 + 103 < 1000; produce
+        (85970) 103 (103) 100 (1 7)
+87 + 03 < 100; produce
+        (859701) 3 (03) 10 (1 7)
+87 + 3 >= 10; consume       
+        (859701) 117 (117) 100 (7)
+87 + 17 >= 100; consume
+        (859701) 1779 (1779) 1000 '()
+87 + 779 < 1000; produce
+        (8597011) 779 (779) 100 '()
+
+
+2) The way I approached this really was reading the book,
+since this was my first time departing from Racket and finally
+writing my code first in scheme I was a bit initimated. So I decided
+to fully understand the psuedo-code and reading of 8.1 and after
+practicing and understanding Figure 18 it made a lot more sense.
+
+I went by the psuedocode because I started to understand that 
+what was producing the output strm was produce, meaning that
+if my mult-stream returned a list of the output stream. 
+then produce should be the only thing that output stream.
+
+After that consume was unironically deletiing the inputstream
+, I was trying to consider for a while what ended the stream.
+So I safely added a return a-list based on figure 16th understanding.
+
+figure 16 red values represent that we're ready to output it into the stream
+however I didn't get a proper understanding of the end and 
+assumed that it took the rest. 

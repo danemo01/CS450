@@ -1,0 +1,86 @@
+Danley Nemorin
+
+
+
+1) Finish filling the table
+
+        Output Stream a a-list pow Input Stream
+        (85) 869 (869) 100 (4 3 6 9 1 7)
+69 + 87 >= 100; consume
+        (85) 9038 (9038) 1000 (3 6 9 1 7)
+87 + 38 < 1000; produce
+        (859) 38 (038) 100 (3 6 9 1 7)
+87 + 38 >= 100; consume
+        (859) 641 (641) 100 (6 9 1 7)
+87 + 41 >= 100; consume
+        (859) 6932 (6932) 1000 (9 1 7)
+87 + 932 >= 1000; consume
+        (859) 70103 (70103) 10000 (1 7)
+87 + 103 < 10000; produce
+        (8597) 103 (0103) 1000 (1 7)
+87 + 103 < 1000; produce
+        (85970) 103 (103) 100 (1 7)
+87 + 03 < 100; produce
+        (859701) 3 (03) 10 (1 7)
+87 + 3 >= 10; consume       
+        (859701) 117 (117) 100 (7)
+87 + 17 >= 100; consume
+        (859701) 1779 (1779) 1000 '()
+87 + 779 < 1000; produce
+        (8597011) 779 (779) 100 '()
+
+
+2) The way I approached this really was reading the book,
+since this was my first time departing from Racket and finally
+writing my code first in scheme I was a bit initimated. So I decided
+to fully understand the psuedo-code and reading of 8.1 and after
+practicing and understanding Figure 18 it made a lot more sense.
+
+I went by the psuedocode because I started to understand that 
+what was producing the output strm was produce, meaning that
+if my mult-stream returned a list of the output stream. 
+then produce should be the only thing that output stream.
+
+After that consume was unironically deletiing the inputstream
+, I was trying to consider for a while what ended the stream.
+So I safely added a return a-list based on figure 16th understanding.
+
+figure 16 red values represent that we're ready to output it into the stream
+however I didn't get a proper understanding of the end and 
+assumed that it took the rest. 
+
+after writing the psuedo code I was able to get it working... or so I thought
+output: (8 5 9 7 0 1 1 7 7 9) 
+expected: (8 5 9 0 7 0 1 1 7 7 9)
+
+I wasnt unsure how to approach this issue, I was able to get some hints.
+However after experimenting a bit. I was able to solve it. 
+I needed to make sure that the a-list changed and appended the
+extra 0 within a previous step. Once I checked for that, it worked
+with no issue.
+
+Part 2:
+Pi:
+
+This was not so bad, but I got into a lot of bugs working on this.
+Understanding it was pretty hard, I decided to create all my needed
+procedures that I would start using and they were fairly simple to make.
+I tested add-matrix, compose, on online matrix calculator just to verify
+there was no issues. After that I decided to approach the problem,
+and I felt since I understood mult-stream it was easy to see what was 
+going on here. However understanding the series that can be used for Pi
+was confusing. After I realized that we turn the series into f and
+we understand that f o g == (AB) (assuming f = A and g = B). Which
+then was used to create my infinite output stream that was mentioned
+in section 8.2
+
+ALgorithm:
+
+Essentially we create a action, consume and produce prodecures.
+
+Action is checking to see if (matrix->int a [3,4]) are the same
+if it is, then we're ready to produce a output strm.
+
+If it's not we consume, and remove something within the infinte input stream.
+
+
