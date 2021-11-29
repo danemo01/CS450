@@ -1,0 +1,5 @@
+Question two 
+
+- Exercise 5.24 (page 560)
+- We can "cheat" and use ev-cond instead of cond->if
+- We can still cheat probably rewriting cond->if based upon 

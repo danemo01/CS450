@@ -161,3 +161,11 @@
                      (sequence->exp (cond-actions first))
                      (expand-clauses rest))))))
 ;; end of Cond support
+; example of cond
+;
+
+; (cond 
+;   ((= 1 val) val) 
+;   ((= 2 val) 10)
+;   ((= 3 val) 300)
+;   (else 400))
