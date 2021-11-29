@@ -40,27 +40,26 @@
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
 (define (xeval exp env)
-  (let ((action ((special-form-table 'lookup) (type-of exp))))
-    (cond ((self-evaluating? exp) exp)
-          ((and (not (pair? exp ))
-                (not (equal? #f action)))
-           (string-append "Special form:  "
-                          (symbol->string exp)))
-          ((variable? exp) (lookup-variable-value exp env))
-          ((not (equal? #f action))
-           (if (or (equal? (type-of exp) 'set!)
-                   (equal? (type-of exp) 'define))
-               (let ((sp-form ((special-form-table 'lookup) (cadr exp))))
-                 (if (not (equal? #f sp-form))
-                     (error "Cannot alter special-form -- XEVAL" (cadr exp)))))
-            (action exp env))
-          ((application? exp)
-           (xapply (xeval (operator exp) env)
+  (cond ((self-evaluating? exp) exp)
+        ((variable? exp) (lookup-variable-value exp env))
+        ((quoted? exp) (text-of-quotation exp))
+        ((assignment? exp) (eval-assignment exp env))
+        ((definition? exp) (eval-definition exp env))
+        ((if? exp) (eval-if exp env))
+        ((lambda? exp)
+         (make-procedure (lambda-parameters exp)
+                         (lambda-body exp)
+                         env))
+        ((begin? exp) 
+         (eval-sequence (begin-actions exp) env))
+        ((cond? exp) (xeval (cond->if exp) env))
+        ((application? exp)
+         (xapply (xeval (operator exp) env)
 		  (list-of-values (operands exp) env)))
-          (else
-           (error "Unknown expression type -- XEVAL " exp)))))
+        (else
+         (error "Unknown expression type -- XEVAL " exp))))
 
-(define (xapply procedure arguments)
+(define (xapply procedure arguments)
   (cond ((primitive-procedure? procedure)
          (apply-primitive-procedure procedure arguments))
         ((user-defined-procedure? procedure)
@@ -285,7 +284,7 @@
 ;;; Procedures
 
 (define (make-procedure parameters body env)
-  (begin (list 'procedure parameters body env)))
+  (list 'procedure parameters body env))
 
 (define (user-defined-procedure? p)
   (tagged-list? p 'procedure))
@@ -393,12 +392,12 @@
 ;;; This is initialization code that is executed once, when the the
 ;;; interpreter is invoked.
 
-;(define (setup-environment)
-;  (let ((initial-env
-;         (xtend-environment (primitive-procedure-names)
-;                            (primitive-procedure-objects)
-;                            the-empty-environment)))
-;    initial-env))
+(define (setup-environment)
+  (let ((initial-env
+         (xtend-environment (primitive-procedure-names)
+                            (primitive-procedure-objects)
+                            the-empty-environment)))
+    initial-env))
 
 ;;; Define the primitive procedures
 
@@ -407,21 +406,21 @@
 
 (define (primitive-implementation proc) (cadr proc))
 
-;;(define primitive-procedures
-;;  (list (list 'car car)
-;;        (list 'cdr cdr)
-;;        (list 'cons cons)
-;;        (list 'null? null?)
+(define primitive-procedures
+  (list (list 'car car)
+        (list 'cdr cdr)
+        (list 'cons cons)
+        (list 'null? null?)
 ;;      more primitives
-;;        ))
+        ))
 
-;;(define (primitive-procedure-names)
-;;  (map car
-;;       primitive-procedures))
+(define (primitive-procedure-names)
+  (map car
+       primitive-procedures))
 
-;;(define (primitive-procedure-objects)
-;;  (map (lambda (proc) (list 'primitive (cadr proc)))
- ;;      primitive-procedures))
+(define (primitive-procedure-objects)
+  (map (lambda (proc) (list 'primitive (cadr proc)))
+       primitive-procedures))
 
 ;;; Here is where we rely on the underlying Scheme implementation to
 ;;; know how to apply a primitive procedure.
@@ -472,25 +471,19 @@
 ;;;        user to run the evaluator.
 ;;;
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+(((car cdr cons null?) (primitive < primitive: car Pair >) 
+  (primitive < primitive: cdr Pair >) 
+  (primitive < primitive: cons Any Any >) 
+  (primitive < primitive: null? Any >)))
 
-
-;(define the-global-environment (setup-environment))
-(define the-global-environment '())
+(define the-global-environment (setup-environment))
 
 (display "... loaded the metacircular evaluator. (s450) runs it.")
 (newline)
 
-;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-;;;
-;;;	 Danley Nemorin HW6 - Metacircular Evaluator 
-;;;      
-;;;
-;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-
-; Table used to manage the specialform
-; Stripped from previous HW
 (define (make-table)
   (let ((local-table (list '*table*)))
+
     (define (lookup key)
       (let ((record (assoc key (cdr local-table))))
         (if record
@@ -509,163 +502,26 @@
             (else (error "Uknown operation -- TABLE" m))))
     dispatch))
 
-;; We define our special-form-table
-(define special-form-table (make-table))
 
-;; The procedure used to install special-forms into the table
-;; simply just calling an insert
+(define t (make-table))
+
 (define (install-special-form special-form-name functional)
-  ((special-form-table 'insert) special-form-name functional))
+  ((t 'insert) special-form-name functional))
 
-; type-of
-; checks the type by basically getting the name that's being passed by
-; if it's a pair, get the name of the procedure/specialform
-; if it's not, return some expression (this is used to solve Q5)
-(define (type-of exp)
-  (if (pair? exp)
-      (car exp)
-      exp))
-
-
-; Install primitive-procedure
-;
-(define (install-primitive-procedure name action)
-  (let ((primitive-action (list 'primitive action)))
-    (if (null? the-global-environment)
-        (set! the-global-environment
-              (xtend-environment
-               (list name)
-               (list primitive-action)
-               the-global-environment))
-        (let ((special-form-var ((special-form-table 'lookup) (type-of name))))
-          (if (equal? #f special-form-var)
-          (define-variable! name primitive-action the-global-environment)
-          (error "Cannot add special form" name)))
-        )))
 
 ; Now install all special-forms
-
-
-
-(define (eval-defined? exp env)
-  (let ((define-name (cadr exp)))
-
-    (define (scan-frame env)
-      (let ((frame (car env)))
-        (let ((define-name-exist (if (null? (car frame))
-                                     #f
-                                     (scan (car frame) (cdr frame)))))
-              (if define-name-exist
-                  define-name-exist
-                  (if (eqv? env the-global-environment)
-                      #f
-                      (scan-frame (cdr env))
-                      )))))
-    
-    (define (scan vars vals)
-      (cond ((null? vars) #f)
-            ((eq? define-name (car vars)) #t)
-            (else  (scan (cdr vars) (cdr vals)))))
-
-      (scan-frame env)))
-
-(define (eval-local-defined? exp env)
-  (let ((define-name (cadr exp)))
-    (define (scan vars vals)
-      (cond ((null? vars) #f)
-            ((eq? define-name (car vars)) #t)
-            (else  (scan (cdr vars) (cdr vals)))))
-    
-    (scan (caar env) (cdar env))
-    ))
-
-
-(define (eval-local-unbound exp env)
-  (let ((define-name (cadr exp)))
-    (define (scan prev-vars prev-vals)
-      (let ((vars (cdr prev-vars))
-            (vals (cdr prev-vals))) 
-        (cond ((null? vars) #f)
-            ((eq? define-name (car vars))
-             (begin (set-cdr! prev-vars (cdr vars))
-                      (set-cdr! prev-vals (cdr vals))))
-            (else (scan vars vals)))))
-    (scan (caar env) (cdar env))
-    ))
-
-(define (eval-unbound exp env)
-  (let ((define-name (cadr exp)))
-    (define (scan-frame env)
-      (let ((frame (car env)))
-        (let ((define-name-exist (if (null? (car frame))
-                                     #f
-                                     (scan (car frame) (cdr frame)))))
-          (if (eqv? env the-global-environment)
-              #f
-              (scan-frame (cdr env))))))
-    
-    (define (scan prev-vars prev-vals)
-      (let ((vars (cdr prev-vars))
-            (vals (cdr prev-vals))) 
-        (cond ((null? vars) #f)
-            ((eq? define-name (car vars))
-             (begin (set-cdr! prev-vars (cdr vars))
-                      (set-cdr! prev-vals (cdr vals))))
-            (else (scan vars vals)))))
-  
-    (scan-frame env)))
-      
-  (define eval-load
-  (lambda (exp env)
-    (define (filename exp) (cadr exp))
-    (define thunk (lambda ()
-		    (readfile)
-		    ))
-    (define readfile (lambda()
-		       (let ((item (read)))
-			 (if (not (eof-object? item))
-			     (begin
-			       (xeval item env)
-			       (readfile))))
-		       ))
-    (with-input-from-file (filename exp) thunk)
-    (filename exp)      ; return the name of the file - why not?
-    ))
-
-(begin
-(install-special-form 'quote (lambda (exp env) (text-of-quotation exp)))
+(install-special-form 'quote text-of-quotation)
 (install-special-form 'set! eval-assignment)
 (install-special-form 'lambda (lambda (exp env)
                                 (make-procedure 
                                   (lambda-parameters exp)
-                                  (lambda-body exp)
-                                  env)))
+                                  (lambda-body exp))))
 
 (install-special-form 'define eval-definition)
 (install-special-form 'if eval-if)
 (install-special-form 'begin (lambda (exp env) (eval-sequence exp env)))
 (install-special-form 'cond (lambda (exp env) (xeval (cond->if exp) env)))
 
-(install-special-form 'defined? eval-defined?)
-(install-special-form 'locally-defined? eval-local-defined?)
-(install-special-form 'make-unbound! eval-unbound)
-(install-special-form 'locally-make-unbound! eval-local-unbound)
-(install-special-form 'load eval-load)
-(install-primitive-procedure 'null? null?)
-(install-primitive-procedure 'cons cons)
-(install-primitive-procedure 'cdr cdr)
-(install-primitive-procedure 'car car)
-(install-primitive-procedure '+ +)
-(install-primitive-procedure '- -)
-(install-primitive-procedure '/ /)
-(install-primitive-procedure '* *)
-(install-primitive-procedure 'not not)
-(install-primitive-procedure 'remainder remainder)
-(install-primitive-procedure 'equal? equal?))
-
-
-
-
-
-
-
+(make-procedure (lambda-parameters '(lambda (x) (null? x)))
+                         (lambda-body '(lambda (x) (null? x)))
+                          the-global-environment)

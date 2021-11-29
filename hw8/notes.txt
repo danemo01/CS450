@@ -1,0 +1,274 @@
+
+So 5.19:
+
+Alyssa needs an implementation of a debugger in the machine.
+But this can be done in so many ways, I read as much as the code I could
+understand and overal what an amazing reg sim. 
+
+But essentially there's so man ways of approaching this.
+And yes I did run down a rabbit-hole, but learned a lot.
+
+The hint provided by Professor Offner, gave an idea.
+We know t
+
+==:  proceures:
+
+Thoughts:
+We're implementing a debugger, I'm considering some ideas
+after finish admiring gnu db. I guess it's best to consider
+that we need to manage how many steps we're in. Similar to the stack.
+- This will help manage the amount of steps it takes
+- perhaps we can also subtract steps based 
+- But that's not true.
+
+After referencing the notes by the professor, I've figured a way
+of approaching this without it being too difficult.
+
+(
+(start 
+    ((goto (label here1))) 
+    ((assign a (const 3))) 
+    ((goto (label there))) 
+    ((assign b (const 4))) 
+    ((goto (label there)))) 
+    
+(here1 
+    ((assign a (const 3)))
+    ((goto (label there))) 
+    ((assign b (const 4)))
+    ((goto (label there)))) 
+(here2 
+    ((assign b (const 4))) 
+    ((goto (label there)))) 
+
+(there)
+
+)
+- Each iteration of the ist is based on labels.
+
+My assumption is that each label must be eqv with each other.
+I should be able to compare
+here2: 
+    ((assign b (const 4))) 
+here1:
+    ((assign b (const 4))) 
+and they should be equivalent. 
+- Just did testing and they are.
+
+Now knowing this, all that needs to be implemented is
+passing that labels list in the assemble procedure and 
+pass it into the machine. We'll use that to be able to access
+the labels and the amount of steps it would take to get there
+
+changes to (new-make-machine):
+added some inner variables
+    - breakpt-lst: will hold the breakpts.
+    - breakpt-table: a reference that will provide the offset and label
+    of a breakpt that's being hold.
+    - labels-data: coming from assemble's extract-labels. a list
+    that will help us obtain the breakpoints.
+    - pc-temp: a register that will hold the state of the machine
+    when a breakpt happens.
+
+(set-breakpoint ( machine ) ( label ) ( n ) ):
+    It calls the machine's 'install-breakpoint
+    passing label and n.
+
+    install label has a variable called inst
+    that it searches for. That will be the instruction
+    that the User (or alyssa) will want to break.
+
+    If it doesn't exist it will just throw error messages.
+
+    But if it does find it, we proceed installing it into
+    the breakpt-table as well as the breakpt-list.
+
+
+
+(proceed-machine *machine*):
+    call's machine's 'proceed-machine
+    It gets the contents saved from the state
+    inwhich the machine caused a breakpt.
+    It puts it into the pc, then calls
+    instruction-execution-proc just so it doesn't
+    cause a loop on the breaking the same break-pt.
+    the calls (execute) continuing it's code until the next breakpt
+    or done appears.
+
+(cancel-breakpoint *machine* *label* *n*)
+    Similar structure to set-breakpoint, we traverse a loop until we find the 
+    inst it was referring to and just use (set-cdr!) to take it of from the
+    breakpt-lst. As for the breakpt-table it will be fine as all it's doing
+    it depending on breakpt-lst having some reference. Older data in the lst
+    will be there and when we install a previous breakpt will get update.
+    instead of a new position.
+
+(cancel-all-break-points *machine*)
+    Very simple, I just set the breakpt-lst to an empty string.
+    That's all it really needs to do.
+
+Notes from the professor:
+
+What did you find difficult?
+
+Myself, my inability to ask for help and as well as
+    to not understand the description of the assignment.
+
+What did you get wrong at first?
+Understanding how to approach it of course.
+I didn't understand at all where to start, the only hint 
+was execute. But then I recall the hint mention in class about extract-labels.
+I was really intinmiidated by it but once I read and understood it I realize
+the code was leaving this amazing list.
+
+What did you learn from this?
+Gain a better understanding at how code gets generated,
+the assemble is an interesting procedure where extract-labels
+creates these lambda expressions with minor changes through a stack
+and goes back up calling each one. It was incredible, but was it really
+necessary?
+
+What would you do differently?
+I would change my breakpt-lst to a lookup table.
+I had realized at the end that it's possible the key
+can be the inst and that would decrease a lot of code.
+Though I'm unsure how effective it really would be.
+I do know I would have a difference perspective on approaching this
+
+
+
+
+
+
+
+
+=== OLD NOTES
+- very redudant, mostly looking at procedure
+I didn't really finish it
+
+
+(set-register-contents! gcd-machine 'a 206)
+(set-register-contents! gcd-machine 'b 40)
+(start gcd-machine)
+(get-register-contents gcd-machine 'a)
+
+
+Understanding make-register:
+holds - contents, some abstract data which can be a list
+'get: returns the contents
+'set: returns a new value being saved
+
+======================================
+Understanding make-stack:
+holds - a list, startin an empty list
+- numbers-pushes counds how many pushes have been made
+- current-depth shows how much depth it's went
+- max-depth - the furthest depth you've went.
+
+'push: uses set! by pushing a new val on the top of the list or empty list
+    - increeases number-pushes by 1
+    - increases the current-depth by 1
+    - checks to see if it's that the max-depth it went 
+    - and updates it.
+
+'pop: pushes an element off, and 
+    uses set! to redefine the list without the 1st element
+    - decreases current-depth by 1
+
+initialize: clears the stack
+- clears number-pushes, max-depth, current-depth to 0
+
+note*: 'push and 'pop are wraped up as pop and push, to assume it's the
+main and **only** stack?
+=======================================================
+Understanding make-machine:
+
+make-machine parameters:
+    register-names:
+    - all of the registers that will be name
+    ops:
+    - the operators that will be used
+    controller-text
+    - controller-text 
+
+first it creates the make-new-machine, which is the initlization of the machine object:
+- pc - the program counter - a register that holds the instruction of the code (instrouction sequence?)
+- flag - flag register - a temp register that informs you of what you need to do
+- stack - inexpensive way of holding temp data
+- the-instruction-sequence
+
+- this creates a machine object
+- by doing that it installs the operations
+- as well as installing instruction-sequence of the code
+- as such this code should have some sequence, and it also makes sense
+- that the sequence can be run. and that's created from the assemble prodecure
+
+- 
+
+
+
+-An attempt note from understanding 
+
+
+make-new-machine:
+- pc - the program counter - a register that holds the instruction of the code (instrouction sequence?)
+- flag - flag register - a temp register that informs you of what you need to do
+- stack - inexpensive way of holding temp data
+- the-instruction-sequence
+- the ops, a list of the stack and the stat stack;
+- register-table?? 
+
+allocate-register: passes a name
+- if registers exist in register table
+    perror
+  if not
+   - add it on top of the register-table
+
+lookup-register:
+    - looks up a register in the register table
+
+
+assemble: 
+    Essentially creates the instruction-sequence
+    to pass into the machine.
+
+    - calls extract-labels passing the controller-text
+    and the newly created machine.
+
+    - The intent is calling a function call, that will essentially return what?
+
+
+Extract-labels:
+    - It recursively goes through each text
+    - it passes receive with a lambda instruction.
+    - it leaves out calling the last recieve function passed.
+    - the last recieve function has an environment based on the previous
+    environment frame. Each environment frame has some relation to each
+    text we got. So we're going outward, until we a list.
+
+Recieve function:
+    - The intent is to recursively go back up
+    each environment frame until it goes into update-insts.
+
+    - As it's going up, it gets each insts and puts them within an
+    list such as ((branch (label gcd-done)))
+    where (branch (label gcd-done)) is the text, and
+    the procedure is next to it as an empty list, hence the extra list.
+    - While it's doing that it's checking to see if it's an label.
+    - If it's a label it puts code where it's mapped to there.
+    - then calls update-insts.
+
+update-insts:
+    This is passed with the insts and labels created
+    where insts is a text paired with some empty list that will be a 
+    procedure object. And a label.
+
+
+    
+
+
+execute - hard:
+- a recursive algorithm that will keep getting from the insts to the pc until
+its done. 
+
+This is where the breakpoint functionality works

@@ -1,0 +1,287 @@
+
+Q1)
+
+Here are my notes on understanding how xeval looks at
+defining a procedure object.
+
+
+;; Understanding how environment spaces gets extended, and or created
+(define z 450)
+xval evaluates it define procedure, and eval-definition
+eval-defintion gets the name of the procedure/variable calls it 
+
+(define (eval-definition exp env)
+  (let ((name (definition-variable exp)))  
+    (define-variable! name
+      (xeval (definition-value exp) env)
+      env)
+  name))  
+
+name in define would be z
+before calling define-variable! it calls xeval
+which passes we will get 300 for it.
+
+then we go into define-variable!:
+
+(define (define-variable! var val env)
+  (let ((frame (first-frame env)))
+    (define (scan vars vals)
+      (cond ((null? vars)
+             (add-binding-to-frame! var val frame))
+            ((eq? var (car vars))
+             (set-car! vals val))
+            (else (scan (cdr vars) (cdr vals)))))
+    (scan (frame-variables frame)
+          (frame-values frame))))
+
+The representation of frame 
+essentially it takes one extra space of env which currently 
+is the representation of the global environment
+
+then calls scan passing the define variable/procedure names
+which are the frame-variables and it's frame-values
+frame-variables - (y x car cdr cons null?)
+frame-values - (300 300 {primitive proc:mcar} ... )
+- it essentially removes the first element in the list and gives the 
+frame-variable and frame-values
+
+when go into scan:
+- If there's no vars we just add it into the frame
+- If there is some variable, we just set-car 
+    instead we call add-binding-to-frame
+    which "installs" the name of the variable
+    as well as the location of where it is parellel
+    essentiall a parallel list
+- if we didn't find a var, we just continue on.
+- if we never find a var we wanted to find, we just create a new one.
+- then we return back to eval-defintion which would be z
+
+- 
+Now the same particular version with lambda e.g. adding a procedure not a var,
+since a evaluating a procedure should give us an procedure object
+procedure: (define (hi x) (null? x))
+When we call this on (s450)
+xeval gives the eval-defintion procedures
+then the eval-define procedure gets the name 'hi (which it will return)
+and calls an define-variable! adding it into the env-list 
+
+(define-variable)
+param 1: passes the name
+param 2: passes another eval
+which passes the passes the lambda, which returns 
+lambda returns a procedure object, that is a procedure object
+the procedure object is something like:
+(procedure (x) ((null? x)) (((car cdr cons null?)
+   (primitive car) (primitive cdr) ...)) )
+it gives context that it's a user-define procedure
+it passes the existing env into its list (global-env)
+
+then once we go into define-variable! it "scans" and lookup
+to see if the var exist in the environment, and if it doesn't
+it simply calls add-binding-to-frame!
+
+
+Q2)
+  We essentially create a new table that will store all of the special
+  forms. And we create a procedure that installs it. After that
+  I changed the xeval to instnatly lookup for a potential special-form
+  and if it's something that isn't in the special-form table it returns
+  #f making it really easy to check.
+
+  After that, we check if the action variable we got isn't #f, we
+  call the special-form procedure used for evaluation. 
+  
+
+
+Q3:
+  install-primitive-procedure is adding it directly into the global
+  Essentially we create a procedure that checks to see if the 
+  global-environment is an empty list, and if it is. with the passing
+  name and "primitive-action" (which is essentially appending 'primitive
+  above some existing primitive procedure from UMBScheme). After passing the
+  two, we call set the the-global-environment upon the existing 
+  global-environment creating the-global-environment structure on the 1st name
+   and action.
+
+  If it's not the 1st primtive procedure that's being installed, it will 
+  just call !define-variable that passes name, primitive-action and 
+  the-global-environment extendingthe primitive-procedures 
+  on the-global-environment.
+
+
+Q4:
+  The error when I typed if on define, ran an error on (lookup-variable-value)
+  so added added another if on cond at xeval which checked to see if it's not
+  a pair, and as well as the action local variable I catch should return prod
+  since the special form does exist. If the cond passes, it just returns
+  a string which is  string-append "Special form:  " and (symbol->string).
+
+  I implemented this on the conds for xeval
+
+Q5:
+  My assumption of approaching this is to update xeval, so when we know
+  we're looking for a special form, we check of the cadr is potentially
+  a special form. If it is a special-form, then we call an error
+  closing the s450. I'm unsure if errors will break your code
+  I hope I didn't properly read and miss that notification
+
+
+Q6:
+  Honestly I've overlooked at this understanding on the environment,
+  I was worried when I would have to deal learning how to traverse it.
+
+  I used a lot of test case to check if this worked, as well as took
+  extremely slow steps at understanding this.
+
+  (define?) and (locally-defined?):
+    This was tackled once I understood how to traverse through an the
+    environment frame. I just wrote the ideas based on scan on
+    some of the code that does a parellel traverse betwen the vars and the
+    vals. 
+
+    Once understanding how simple it is to traverse through a bunch of 
+    environment frame, I was able to now check and see if the define-name
+    was located in an environment-frame's vars list. Once I was able to do
+    that, I did a lot of testing tinkering with these "objects" as they have
+    their own environment-frame. This was the HARDEST part, constantly taking
+    slow steps and a lot of believing.
+
+    (make-unbound! symbol)
+    (locally-make-unbound! symbol)
+
+    I didn't have enough time for this, so the code isn't ideal. I stripped
+    the idea I had when traversing a environment frame. I started realizing
+    I could right an for-each or something else to make this extremely
+    simple. But locally-make-unbound! just runs scan-frame, and once it finds
+    the symbol it removes it using (set-cdr) on both the vars-list and vals-list
+    and just add in the previous var and next var. I didn't know this would work
+    I was really doubtful about it, until I ran a lot of small examples of
+    removing an element within the list and it worked perfectly fine.
+
+    There's a bug, I forgot to fix it. But make-unbound and locally-make-unbound!
+    returns a #f.
+
+
+
+
+
+  (define (eat-system)
+      (define yums 0)
+      (define (eat val)
+        (set! yums (+ yums val)) 
+      )
+      (define (how-much)
+        yums
+      )
+      (define (test1) (make-unbound! how-much))
+      (define (dispatch m) 
+        (cond ((equal? m 'eat) eat) 
+              ((equal? m 'how-much) how-much)
+              ((equal? m 'test) test1)
+              (else '()))
+
+      )
+     dispatch
+    )
+  I used eat-system, to help able to understand how to traverse through
+  the environment frames, and as well as test and confirm that
+
+   (define (hi x)
+    (define what 100)
+    (define (checker x y) (equal? x y ))
+    (define (debug) (make-unbound! null?))
+    (debug))
+
+    (define (f a b)  (locally-defined? a))
+    (define (e a b) (defined? a))
+    (define (d a b) ( ))
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+---overlooked
+(define (eval-defined? exp env)
+  (let ((define-name (cadr exp)))
+
+    (define (scan-frame env)
+      (let ((frame (car env)))
+        (let ((define-name-exist (if (null? (car frame))
+                                     #f
+                                     (scan (car frame) (cadr frame)))))
+              (if define-name-exist
+                  define-name-exist
+                  (if (eqv? env the-global-environment)
+                      #f
+                      (scan-frame (cdr env))
+                      )))))
+    
+    (define (scan vars vals)
+      (cond ((null? vars) #f)
+            ((eq? define-name (car vars)) #t)
+            (else (scan (cdr vars) (cdr vals)))))
+
+      (scan-frame env)))
+
+(define (eval-defined? exp env)
+  (let ((1st-frame (car env))
+        (2nd-frame (cadr env))
+        (3rd-frame (caddr env)))
+    (let ((1st-frame-var (car 1st-frame))
+          (1st-frame-val (cdr 1st-frame))
+          (2nd-frame-var (car 2nd-frame))
+          (2nd-frame-val (cdr 2nd-frame))
+          (3rd-frame-var (car 3rd-frame))
+          (3rd-frame-val (cdr 3rd-frame)))
+
+      (define (scan vars vals)
+        (cond
+          ((null? vars) #f)
+          ((eq? 'null (car vars)) #t)
+          (else (scan (cdr vars) (cdr vals)))))
+      (scan 3rd-frame-var 3rd-frame-val))))
+
+
+(define (eval-defined? exp env)
+  (let ((define-name (cadr exp)))
+
+    (define (scan-frame env)
+      (let ((frame (car env)))
+        (let ((define-name-exist (if (null? (car frame))
+                                     #f
+                                     (scan (car frame) (cdr frame)))))
+              (if define-name-exist
+                  define-name-exist
+                  (if (eqv? env the-global-environment)
+                      #f
+                      (scan-frame (cdr env))
+                      )))))
+    
+    (define (scan vars vals)
+      (cond ((null? vars) #f)
+            ((eq? define-name (car vars)) #t)
+            (else  (scan (cdr vars) (cdr vals)))))
+
+      (scan-frame env)))
