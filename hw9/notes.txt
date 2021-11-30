@@ -1,5 +1,62 @@
 Question two 
 
+Notes on eceval:
+    - Large register machine 
+    - an explicit evalutor 
+    - Seven reg machine
+        - exp - holds rexpression for evalatuion
+        - env - evalatuion of environment
+        - proc - procedure to be applied
+        - argl - list of evaluated arguments
+        - continue place to go to next
+        - val result of evaluation
+        - unev temp register for expressions
+        
+
+
 - Exercise 5.24 (page 560)
 - We can "cheat" and use ev-cond instead of cond->if
-- We can still cheat probably rewriting cond->if based upon 
+- We can still cheat probably rewriting cond->if based upon
+
+We're going to extend cond, let, and so on.
+
+But we're not going to use cond->if, we're going to need to
+write it in machine code.
+
+If we look at 4.1.2, we can see all the things that are used
+
+Understanding and reimplementing cond->if
+
+It's probably ideal to just understand that cond->if is checking to see
+if the lsit being past is a cond special form.
+
+The intent of cond->if is that it returns a list of nested if.
+this becomes
+ (cond 
+   ((= 1 val) val) 
+   ((= 2 val) 10)
+   ((= 3 val) 300)
+   (else 400))
+
+(if (= 1 val) 
+    val 
+    (if (= 2 val) 
+        10 
+        (if (= 3 val) 
+            300 
+            400)))
+
+The meat of this assignment is mostly based on expand-clauses
+(define (expand-clauses clauses)
+  (if (null? clauses)
+      'false                          ; no else clause
+      (let ((first (car clauses))
+            (rest (cdr clauses)))
+        (if (cond-else-clause? first)
+            (if (null? rest)
+                (sequence->exp (cond-actions first))
+                (error "ELSE clause isn't last -- COND->IF"
+                       clauses))
+            (make-if (cond-predicate first)
+                     (sequence->exp (cond-actions first))
+                     (expand-clauses rest))))))
