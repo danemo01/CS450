@@ -1,0 +1,8 @@
+((continue)
+ (val)
+ (val)
+ (
+  (assign val (const 5))
+  (goto (reg continue))
+ )
+)

@@ -25,3 +25,17 @@ ABC.SCM ---[compiler-shell.scm] --> ABC.CMP ----[machine-shell.scm]----> running
 It puts the last in first, and first 
 
 Nothing in page 4 do you need to modify
+- We need to add let, and if?
+- we need to compile overall s450.scm...
+- We need to put cdr and car, pretty self-forward
+- Two things are map? and apply.
+- Apply has been given with new hints
+- Map is pretty harder
+- We don't be modifying most codes in compiler.scm
+- We will be using a lot stuff from the existing code, such as for apply
+we might need to use apply-procedure-call? (forgot).
+- We reallly won't need to modify code, we just need to add stuff into it like the 
+previous HW.
+- There's a lot to talk about, but he wants us to drive the code. Walking through in more
+detail. 
+- Any questions? No? 
