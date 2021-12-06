@@ -12,4 +12,8 @@
 ;;;; I added the following 2 lines (C. Offner):
 
 (define the-global-environment (setup-environment))
+
+;(set-breakpoint eceval 'ev-cond-end 5)
+;(set-breakpoint eceval 'ev-cond-loop 7)
 (start eceval)
+

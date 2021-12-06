@@ -84,8 +84,22 @@
    (list 'adjoin-arg adjoin-arg)
    (list 'last-operand? last-operand?)
    (list 'no-more-exps? no-more-exps?)	;for non-tail-recursive machine
-   (list 'get-global-environment get-global-environment))
-   )
+   (list 'get-global-environment get-global-environment)
+   ;Danley's implementation
+   (list 'cond? cond?)
+   (list 'cond-clauses cond-clauses)
+   (list 'condif-empty? condif-empty?)
+   (list 'first-if first-if)
+   (list 'cond-else-clause? cond-else-clause?)
+   (list 'condif->if condif->if)
+   (list 'rest-ifs rest-ifs)
+   (list 'false? false?)
+   (list 'false-cond false-cond)
+   (list 'else-val else-val)
+   (list 'more-if-exp? more-if-exp?)
+   (list 'sequence->exp sequence->exp)
+   (list 'cond-actions cond-actions)
+   ))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;;
@@ -155,6 +169,9 @@ eval-dispatch
   (branch (label ev-definition))
   (test (op if?) (reg exp))
   (branch (label ev-if))
+  (test (op cond?) (reg exp))
+  ; checking for conds now
+  (branch (label ev-cond))
   (test (op lambda?) (reg exp))
   (branch (label ev-lambda))
   (test (op begin?) (reg exp))
@@ -312,36 +329,53 @@ ev-begin
 ;;;   b) A BEGIN expression is a stand-alone sequence.
 ;;; So ev-sequence is jumped to initially from one of those two places.
 
+; ev-sequence
+;   ;; On entry,
+;   ;;   unev contains the (unevaluated) sequence elements.  The first
+;   ;;     one will be put in the exp register.
+;   ;;   env contains the environment in which to evaluate the sequence
+;   ;;     elements.
+;   ;;   The continuation is on top of the stack.
+;   (assign exp (op first-exp) (reg unev))
+;   ;; If this is the last element of the sequence, we just go evaluate
+;   ;; it.  We don't need to save anything on the stack.
+;   (test (op last-exp?) (reg unev))
+;   (branch (label ev-sequence-last-exp))
+;   ;; Otherwise, we need to save unev (to keep the remainder of the
+;   ;; unevaluated sequence) and env (so all elements of the sequence
+;   ;; can be evaluated in the same environment).
+;   (save unev)
+;   (save env)
+;   (assign continue (label ev-sequence-continue))
+;   (goto (label eval-dispatch))
+; ev-sequence-continue
+;   ;; Now we're back from evaluating the sequence element.  Restore env and
+;   ;; unev, truncate unev, and go around the loop again.
+;   (restore env)
+;   (restore unev)
+;   (assign unev (op rest-exps) (reg unev))
+;   (goto (label ev-sequence))
+; ev-sequence-last-exp
+;   ;; Just go evaluate the last element of the sequence tail-recursively.
+;   (restore continue)
+;   (goto (label eval-dispatch))
+
 ev-sequence
-  ;; On entry,
-  ;;   unev contains the (unevaluated) sequence elements.  The first
-  ;;     one will be put in the exp register.
-  ;;   env contains the environment in which to evaluate the sequence
-  ;;     elements.
-  ;;   The continuation is on top of the stack.
+  (test (op no-more-exps?) (reg unev))
+  (branch (label ev-sequence-end))
   (assign exp (op first-exp) (reg unev))
-  ;; If this is the last element of the sequence, we just go evaluate
-  ;; it.  We don't need to save anything on the stack.
-  (test (op last-exp?) (reg unev))
-  (branch (label ev-sequence-last-exp))
-  ;; Otherwise, we need to save unev (to keep the remainder of the
-  ;; unevaluated sequence) and env (so all elements of the sequence
-  ;; can be evaluated in the same environment).
   (save unev)
   (save env)
   (assign continue (label ev-sequence-continue))
   (goto (label eval-dispatch))
 ev-sequence-continue
-  ;; Now we're back from evaluating the sequence element.  Restore env and
-  ;; unev, truncate unev, and go around the loop again.
   (restore env)
   (restore unev)
   (assign unev (op rest-exps) (reg unev))
   (goto (label ev-sequence))
-ev-sequence-last-exp
-  ;; Just go evaluate the last element of the sequence tail-recursively.
+ev-sequence-end
   (restore continue)
-  (goto (label eval-dispatch))
+  (goto (reg continue))
 
 ev-if
   (save exp)
@@ -363,6 +397,65 @@ ev-if-consequent
   (assign exp (op if-consequent) (reg exp))
   (goto (label eval-dispatch))
 
+;============================================
+;=           Danley's Code                  =
+;=       Implementation of eval-cond        =
+;============================================
+ev-cond
+  (save exp)
+  (save env)
+  (save continue)
+  (assign exp (op cond-clauses) (reg exp))
+  (assign continue (label ev-cond-decide))
+ev-cond-loop
+  (test (op condif-empty?) (reg exp)) ;if empty
+  (branch (label ev-cond-no-val)) ;we return false
+  (save exp) ;if not, save the list into the stack
+  (assign exp (op first-if) (reg exp)) ;we get the first val - ((= 1 val) val)
+  (test (op cond-else-clause?) (reg exp)) ;the predicate is an else
+  (branch (label ev-cond-else)) ;we return 
+  (assign unev (op cond-actions) (reg exp))
+  (assign unev (op sequence->exp) (reg exp))
+  (save unev)
+  (assign exp (op first-if) (reg exp))
+  (goto (label eval-dispatch)) 
+ev-cond-decide
+  (restore unev)
+  (restore exp)
+  (assign exp (op rest-ifs) (reg exp))
+  (test (op false?) (reg val)) ;if val is false we need to continue the loop.
+  (branch (label ev-cond-loop))
+  (test (op true?) (reg val))
+  (branch (label ev-cond-end))
+  (goto (label ev-cond-error2))
+ev-cond-no-val
+  (assign unev (op false-cond) (reg exp))
+  (goto (label ev-cond-end))
+ev-cond-else
+  (assign unev (op else-val) (reg exp))
+  (restore exp)
+  (test (op more-if-exp?) (reg exp))
+  (branch (label ev-cond-error1))
+  (goto (label ev-cond-end))
+ev-cond-error1
+  (restore continue)
+  (restore env)
+  (restore exp)
+  (assign val (const more-if-conditions-after-else))
+  (goto (label signal-error))
+ev-cond-error2
+  (restore continue)
+  (restore env)
+  (restore exp)
+  (assign val (const predicate-is-not-true-or-false))
+  (goto (label signal-error))
+ev-cond-end
+  (restore continue)
+  (restore env)
+  (restore exp)
+  (assign exp (reg unev))
+  (goto (label eval-dispatch))
+;===== End
 ev-assignment
   (assign unev (op assignment-variable) (reg exp))
   (save unev)

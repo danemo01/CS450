@@ -160,12 +160,13 @@
             (make-if (cond-predicate first)
                      (sequence->exp (cond-actions first))
                      (expand-clauses rest))))))
-;; end of Cond support
-; example of cond
-;
 
-; (cond 
-;   ((= 1 val) val) 
-;   ((= 2 val) 10)
-;   ((= 3 val) 300)
-;   (else 400))
+
+(define (condif->if exp) (list 'if (car exp) (sequence->exp (cdr exp))))
+(define (condif-empty? exp) (null? exp))
+(define (false-cond exp) 'false)
+(define (else-val exp) (cadr exp))
+(define (first-if exp) (car exp))
+(define (rest-ifs exp) (cdr exp))
+
+(define (more-if-exp? exp) (not (null? (cdr exp))))

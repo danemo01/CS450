@@ -6,3 +6,22 @@ ABC.SCM ---[compiler-shell.scm] --> ABC.CMP ----[machine-shell.scm]----> running
 
 -an interper just evaluates and etc
 -a compiler generates code that will be running later, and thus a linkage is necessary
+
+12/6/2021
+- Compile - producing code in which when executed will evaluated the expression
+- We've also talked of self-evaluating compile, compile quoted, and the other compile example.
+- Last we talked about compile sequence, and we talked about expressions in which you have to have labels.
+- Such as if expression, where you compile the test and you either go 1 or the other. check label-generator in page 3
+- If you have questions on regarding it, send him an email.
+
+- We also talked about lambda expression, and the thing about an lambda expression is that we don't normally write it on itself
+- 
+
+- Example 5
+
+(lambda (x y) (+ x y))
+
+
+It puts the last in first, and first 
+
+Nothing in page 4 do you need to modify

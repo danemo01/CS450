@@ -691,16 +691,16 @@
      (goto (label there))
    there)))
 
-(set-register-contents! gcd-machine 'a 400)
-(set-register-contents! gcd-machine 'b 2000)
-(set-breakpoint gcd-machine 'test-b 4)
-(set-breakpoint gcd-machine 'test-b 1)
-(set-breakpoint gcd-machine 'test-b 5)
-(start gcd-machine)
-(get-register-contents gcd-machine 'a)
-(newline)
+; (set-register-contents! gcd-machine 'a 400)
+; (set-register-contents! gcd-machine 'b 2000)
+; (set-breakpoint gcd-machine 'test-b 4)
+; (set-breakpoint gcd-machine 'test-b 1)
+; (set-breakpoint gcd-machine 'test-b 5)
+; (start gcd-machine)
+; (get-register-contents gcd-machine 'a)
+; (newline)
 ; (proceed-machine gcd-machine)
-
-
+;(get-register-contents eceval 'exp)
+;(get-register-contents eceval 'unev)
 
 

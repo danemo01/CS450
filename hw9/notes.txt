@@ -1,62 +1,173 @@
-Question two 
+Q2)
 
 Notes on eceval:
     - Large register machine 
-    - an explicit evalutor 
+    - an explicit evaluator 
     - Seven reg machine
-        - exp - holds rexpression for evalatuion
-        - env - evalatuion of environment
+        - exp - holds expressions for evaluation
+        - env - evaluation of environment
         - proc - procedure to be applied
         - argl - list of evaluated arguments
         - continue place to go to next
         - val result of evaluation
         - unev temp register for expressions
-        
+    - An explicit control evaluator helps us understand
+    designing an metacircular evaluator to where we are
+    running on specific hardware
+The labels are easy to follow
+
+Notes on implementing ev-cond:
+on the label we save all exp, env, continue
+we get con-clauses from the cond in exp and assign it into exp
+then we set the continue to ev-cond-decide
+this is because when we goto the eval-dispatch during this evaluation
+we want to make sure that when it's done evaluating what we want to evaluated
+it goes to the ev-cond-decide to finalize.
+
+ev-cond-loop
+We check to see if exp is an empty list, if so we return false.
+If not, we save the exp just incase and then we just get the
+first element in the list that was produce from (op cond-clauses).
+then we test to see if it's an else clause, if it is we'll branch to
+ev-cond-else. Then we assign unev to get it's ifblock and we 
+run sequence->exp which will assign a begin or the original
+code that was in there.
+
+the reason why I save unev is because originally I ran into a
+bug where unev kept changing after I went into ev-cond-decide. My assumption
+is that ev-sequence or ev-application was using it and return (1).
+So I decided to save it temp and retrieve it on ev-cond-decide.
+Then we get the predicate in exp, and we goto eval-dispatch.
+
+Originally I would assign an if statement by producing one.
+But that ran into an error where if the if statement has an
+if block that was false, it would break my ev-cond-decide.
+So I decided to assign exp into the predicate and it should
+return either #t or #f which ev-cond-decide checks for.
+
+as for going into goto eval-dispatch, I learned after reading
+ev-if is that you can assign continue to a label you want to return to.
+I tested it, and it seemed this would work well for my implementation
+of ev-cond. Assigning the continue would allow me to check if
+the value from the predicate I sent to exp was either #t or #f.
+
+ev-cond-decide:
+Here we restore unev and exp, we make sure to
+go to the next clauses in exp. Then we check if the val is #t or #f.
+
+If it's #f that means we continue the loop, with the next clause already
+in exp. If it's true that means that this clauses is right and we will
+now leave ev-cond and run the exp for that clause.
+
+If it's not #t nor #f it's an error, and I throw out an error message.
+The big issue is that I didn't know how to send a proper error message.
+Hopefully this is reasonably acceptable.
+
+ev-cond-no-val
+Here if we never find a clause, and there's no else as well.
+We simply return false.
+
+ev-cond-else
+If we find an else clause, we just assign the exp and return the exp
+back to eval-dispatch.
+
+ev-cond-error1 & ev-cond-error2
+these are error messages checking to see if there's more conditions
+after else and as well as if the predicate didn't return nor true
+or false. Not to mention they restore continue, env and exp.
+and goto signal-error. I tried seeing if this would work. But
+it just led to more errors.
+
+ev-cond-end:
+At the end, we just restore continue,env,exp and 
+the expression of the ifblock is assigned in unev, and simply
+gets assigned to exp and we goback to eval-dispatch.
+
+Then eval-dispatch will do the evaluation of that block.
+
+After doing that
 
 
-- Exercise 5.24 (page 560)
-- We can "cheat" and use ev-cond instead of cond->if
-- We can still cheat probably rewriting cond->if based upon
+Q3)
+a) That depth is 10 for n<0, and when it's 8 when n = 0
+n total-pushes max-depth
+0     29            8
+1     64            10
+2     99            10
+3     134           10
+4     169           10
+5     204           10
 
-We're going to extend cond, let, and so on.
+64-29=35
+99-64=35
+35*1=35 -> 64-35=29
+35*2=70 -> 99-70=29
 
-But we're not going to use cond->if, we're going to need to
-write it in machine code.
 
-If we look at 4.1.2, we can see all the things that are used
 
-Understanding and reimplementing cond->if
+b) 35n + 29 
 
-It's probably ideal to just understand that cond->if is checking to see
-if the lsit being past is a cond special form.
+Q4) 
+n total-pushes max-depth
 
-The intent of cond->if is that it returns a list of nested if.
-this becomes
- (cond 
-   ((= 1 val) val) 
-   ((= 2 val) 10)
-   ((= 3 val) 300)
-   (else 400))
+1     16            8
+2     48            13
+3     80            18
+4     112           23
+5     144           28
 
-(if (= 1 val) 
-    val 
-    (if (= 2 val) 
-        10 
-        (if (= 3 val) 
-            300 
-            400)))
+Recursive
+48-16=32 
+80-48=32
+32*n+16
 
-The meat of this assignment is mostly based on expand-clauses
-(define (expand-clauses clauses)
-  (if (null? clauses)
-      'false                          ; no else clause
-      (let ((first (car clauses))
-            (rest (cdr clauses)))
-        (if (cond-else-clause? first)
-            (if (null? rest)
-                (sequence->exp (cond-actions first))
-                (error "ELSE clause isn't last -- COND->IF"
-                       clauses))
-            (make-if (cond-predicate first)
-                     (sequence->exp (cond-actions first))
-                     (expand-clauses rest))))))
+ans:
+                Max depth Numb of pushes
+                _______________________
+recursive fact |          |            |
+               |  5n + 3  |  32n + 16  |
+               |-----------------------|
+iterative fact |    10    |  35n + 29  |
+               |__________|____________|
+
+
+Q5) no tail-recursive implementation
+iterative factorial table - massive increase
+n total-pushes max-depth
+1     70            17
+2     107           20
+3     144           23
+4     181           26
+5     218           29
+
+107-70 = 37
+37*1 = 37 -> 70-37 = 33
+37n+33
+
+20-17 = 3 -> 17-3=14
+14+3n
+
+
+recursive factorial table
+n total-pushes max-depth
+1     18            11
+2     52            19
+3     86            27
+4     120           35
+5     154           43
+
+52-18 = 34 -> 18-34=-16
+34n-16
+
+19-11 = 8 -> 11-8= 3
+8n+3
+
+Table:
+
+                Max depth Numb of pushes
+                _______________________
+recursive fact |          |            |
+               |  8n + 3  |  34n - 16  |
+               |-----------------------|
+iterative fact |  14 + 3n |  37n + 33  |
+               |__________|____________|

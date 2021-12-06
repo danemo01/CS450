@@ -571,7 +571,7 @@
 
 ;;; Selectors and predicates for instruction-sequences:
 
-(define all-regs '(env proc val argl continue unev temp1 temp2))
+(define all-regs '(env proc val argl unev continue temp1 temp2))
 
 (define (registers-needed s)
   (if (symbol? s) '() (car s)))
@@ -619,7 +619,7 @@
 ;;; This simply appends the statement lists and propagates the
 ;;; register attributes.
 
-;;; append-instruction-sequences is the the one place where the set of
+;;; append-instruction-sequences is the one place where the set of
 ;;; definitely-modified registers is used.
 
 (define (append-instruction-sequences . seqs)
